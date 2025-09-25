@@ -1,0 +1,80 @@
+/* Container */
+.app-container {
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 16px;
+  font-family: Arial, sans-serif;
+}
+
+/* Table wrapper */
+.table-container {
+  padding: 24px;
+}
+
+/* Title */
+.table-title {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 16px;
+  color: #222;
+}
+
+/* Table */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #ccc;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+/* Table header */
+.table thead {
+  background-color: #f9fafb;
+}
+
+.table th {
+  text-align: left;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  border-bottom: 2px solid #e5e7eb;
+  color: #444;
+}
+
+/* Table body */
+.table td {
+  padding: 12px;
+  font-size: 14px;
+  border-bottom: 1px solid #e5e7eb;
+  color: #333;
+}
+
+/* Zebra striping */
+.table tbody tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+/* Hover effect */
+.table tbody tr:hover {
+  background-color: #f1f5f9;
+  transition: background 0.2s ease;
+}
+.center-btn {
+  display: block;        /* make button a block element */
+  margin: 20px auto;     /* auto left & right = centered */
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background-color: #2563eb; /* blue */
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.center-btn:hover {
+  background-color: #1d4ed8; /* darker blue on hover */
+}
