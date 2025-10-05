@@ -1,46 +1,40 @@
 import { use, useEffect, useState } from "react";
 import "./App.css";
 
-function Table({ data, onDeleteRow }) {
+function Table({ data, columns, onDeleteRow, tableTitle = "List" }) {
+  if (!data.length || !columns.length) {
+    return <p>No data available</p>;
+  }
+
   return (
     <div className="table-container">
-      <h2 className="table-title">Employee List</h2>
+      <h2 className="table-title">{tableTitle}</h2>
       <table className="table">
         <thead>
           <tr>
-            <th>ID</th>
-            <th>Post ID</th>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Body</th>
-            <th>Btn 1</th>
-            <th>Delete</th>
+            {columns
+              .filter((col) => col.isShown)
+              .map((col) => (
+                <th key={col.name}>
+                  {
+                    col.name
+                      .replace(/([A-Z])/g, " $1") // add space before capital letters
+                      .replace(/^./, (str) => str.toUpperCase()) // capitalize first letter
+                  }
+                </th>
+              ))}
+            <th>Actions</th>
           </tr>
         </thead>
-        <tbody>
-          {data.map((row) => (
-            <tr key={row.id}>
-              <td>{row.id}</td>
-              <td>{row.postId}</td>
-              <td>{row.name}</td>
-              <td>{row.email}</td>
-              <td>{row.body}</td>
-              <td>
-                <button
-                  onClick={() =>
-                    alert(
-                      `ID: ${row.id}\nPost ID: ${row.postId}\nName: ${row.name}\nEmail: ${row.email}\nBody: ${row.body}`
-                    )
-                  }
-                >
-                  View Details
-                </button>
-              </td>
 
-              <td>
-                <button onClick={() => onDeleteRow(row.id)}>Delete</button>
-              </td>
-            </tr>
+        <tbody>
+          {data.map((row, index) => (
+            <Row
+              key={index}
+              row={row}
+              columns={columns}
+              onDeleteRow={onDeleteRow}
+            />
           ))}
         </tbody>
       </table>
@@ -48,9 +42,36 @@ function Table({ data, onDeleteRow }) {
   );
 }
 
+function Row({ row, columns, onDeleteRow }) {
+  return (
+    <tr>
+      {columns.map((col) => (
+        <td key={col.name}>{row[col.name]}</td>
+      ))}
+
+      <td>
+        <button
+          onClick={() =>
+            alert(
+              Object.entries(row)
+                .map(([key, value]) => `${key}: ${value}`)
+                .join("\n")
+            )
+          }
+        >
+          View Details
+        </button>
+
+        <button onClick={() => onDeleteRow(row)}>Delete</button>
+      </td>
+    </tr>
+  );
+}
+
 function CommentsTable({
   pageSize = 100,
   data = [],
+  columns = [],
   deleteRow,
   addRow,
   sortByPostIdDesc,
@@ -91,7 +112,13 @@ function CommentsTable({
         />
       </div>
 
-      <Table data={currentItems} onDeleteRow={deleteRow} pageSize={pageSize} />
+      <Table
+        data={currentItems}
+        columns={columns}
+        onDeleteRow={deleteRow}
+        pageSize={pageSize}
+        tableTitle="Comments List"
+      />
 
       <div style={{ marginTop: "20px", textAlign: "center" }}>
         <button
@@ -131,21 +158,32 @@ function CommentsTable({
 
 function App() {
   const [data, setData] = useState([]);
+  const [columns, setColumns] = useState([]); // stores column metadata (like isSortable, isShown, etc.)
 
   function fetchData() {
     fetch("https://jsonplaceholder.typicode.com/comments")
       .then((response) => response.json())
       .then((json) => {
-        console.log(json);
-        //setData([...json]); law 3yzah y re render w ye7es b ta3'yeer
         setData(json);
-        //setCurrentPage(1);
+
+        const firstRow = json[0];
+        const columnsFromDb = Object.keys(firstRow);
+
+        const columnMetadata = columnsFromDb.map((col) => ({
+          name: col,
+          isSortable: !["body"].includes(col), // disable sorting for 'body'
+          isShown: !["email"].includes(col), // hide 'email' column for example
+          isFixed: ["id", "postId"].includes(col), // fix 'id,' and 'postId' columns
+        }));
+
+        console.log("Columns with metadata:", columnMetadata);
+        setColumns(columnMetadata);
       })
       .catch((error) => console.error("Error fetching data:", error));
   }
 
-  function deleteRow(id) {
-    const updatedData = data.filter((item) => item.id !== id);
+  function deleteRow(row) {
+    const updatedData = data.filter((item) => item.id !== row.id);
     setData(updatedData);
   }
 
@@ -176,6 +214,7 @@ function App() {
       <div className="app-container">
         <CommentsTable
           data={data}
+          columns={columns}
           pageSize={100}
           deleteRow={deleteRow}
           addRow={addRow}
