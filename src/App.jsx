@@ -1,3 +1,4 @@
+import * as XLSX from "xlsx";
 import { use, useEffect, useState } from "react";
 import "./App.css";
 
@@ -7,15 +8,225 @@ function Table({
   onDeleteRow,
   tableTitle = "List",
   actions = [],
+  showExportButton = false,
+  showPrintButton = false,
 }) {
+  const [showMenu, setShowMenu] = useState(false);
+
+  //  Function: Export to Excel
+  function handleExportToExcel() {
+    const filteredData = data.map((row) => {
+      let filtered = {};
+      columns
+        .filter((col) => col.isShown)
+        .forEach((col) => {
+          filtered[col.name] = row[col.name];
+        });
+      return filtered;
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(filteredData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
+    XLSX.writeFile(workbook, `${tableTitle}.xlsx`);
+  }
+
+  function handlePrint() {
+    // 1️⃣ Get the title (without buttons)
+    const titleElement = document.querySelector(".table-title"); // adjust if your title class is different
+    const titleText = titleElement ? titleElement.textContent.trim() : "";
+
+    // 2️⃣ Get the table only
+    const table = document.getElementById("printableTable");
+    if (!table) {
+      console.error("No table found to print!");
+      return;
+    }
+
+    // 3️⃣ Clone the table so we can modify it safely
+    const clone = table.cloneNode(true);
+
+    // 4️⃣ Remove the last column if it’s “Actions”
+    const headers = clone.querySelectorAll("thead th");
+    let actionColIndex = -1;
+
+    headers.forEach((th, i) => {
+      if (th.textContent.trim().toLowerCase() === "actions") {
+        actionColIndex = i;
+      }
+    });
+
+    if (actionColIndex !== -1) {
+      headers[actionColIndex].remove();
+      const rows = clone.querySelectorAll("tbody tr");
+      rows.forEach((row) => {
+        const cells = row.querySelectorAll("td");
+        if (cells[actionColIndex]) cells[actionColIndex].remove();
+      });
+    }
+
+    // 5️⃣ Open a new window for printing
+    const printWindow = window.open("", "", "height=800,width=1000");
+
+    // 6️⃣ Write styled HTML with title and table
+    printWindow.document.write(`
+    <html>
+      <head>
+        <title>${titleText}</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            margin: 30px;
+          }
+
+          h2 {
+            text-align: center;
+            margin-bottom: 20px;
+          }
+
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            page-break-inside: auto;
+          }
+
+          th, td {
+            border: 1px solid #333;
+            padding: 8px 10px;
+            text-align: left;
+            font-size: 14px;
+          }
+
+          th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+          }
+
+          tr:nth-child(even) {
+            background-color: #fafafa;
+          }
+
+          /* ✅ Keep table header on every page */
+          thead { display: table-header-group; }
+
+          tr { page-break-inside: avoid; }
+
+          @media print {
+            body {
+              -webkit-print-color-adjust: exact;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <h2>${titleText}</h2>
+        ${clone.outerHTML}
+      </body>
+    </html>
+  `);
+
+    // 7️⃣ Print and close
+    printWindow.document.close();
+    printWindow.print();
+  }
+
   if (!data.length || !columns.length) {
     return <p>No data available</p>;
   }
 
   return (
     <div className="table-container">
-      <h2 className="table-title">{tableTitle}</h2>
-      <table className="table">
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: "10px",
+        }}
+      >
+        <h2
+          className="table-title"
+          style={{ display: "flex", alignItems: "center", gap: "8px" }}
+        >
+          {tableTitle}
+        </h2>
+        {/* ⋯ button beside the title */}
+        {(showExportButton || showPrintButton) && (
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={() => setShowMenu((prev) => !prev)}
+              style={{
+                border: "none",
+                background: "transparent",
+                fontSize: "22px",
+                cursor: "pointer",
+                lineHeight: 1,
+                padding: "2px 5px",
+              }}
+            >
+              ⋯
+            </button>
+
+            {showMenu && (
+              <div
+                style={{
+                  position: "absolute",
+                  right: 0,
+                  top: "120%",
+                  background: "white",
+                  border: "1px solid #ccc",
+                  borderRadius: "8px",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                  zIndex: 10,
+                  minWidth: "140px",
+                }}
+              >
+                {showExportButton && (
+                  <button
+                    onClick={() => {
+                      handleExportToExcel();
+                      setShowMenu(false);
+                    }}
+                    style={{
+                      display: "block",
+                      padding: "8px 16px",
+                      width: "100%",
+                      textAlign: "left",
+                      border: "none",
+                      background: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Export to Excel
+                  </button>
+                )}
+
+                {showPrintButton && (
+                  <button
+                    onClick={() => {
+                      handlePrint();
+                      setShowMenu(false);
+                    }}
+                    style={{
+                      display: "block",
+                      padding: "8px 16px",
+                      width: "100%",
+                      textAlign: "left",
+                      border: "none",
+                      background: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Print
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <table className="table" id="printableTable">
         <thead>
           <tr>
             {columns
@@ -182,6 +393,8 @@ function CommentsTable({
             onClick: (row) => deleteRow(row),
           },
         ]}
+        showExportButton={true}
+        showPrintButton={true}
       />
 
       <div style={{ marginTop: "20px", textAlign: "center" }}>
