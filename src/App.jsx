@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 
 function Table({
@@ -12,6 +12,9 @@ function Table({
   showPrintButton = false,
 }) {
   const [showMenu, setShowMenu] = useState(false);
+  const sortedColumns = [...columns]
+    .filter((col) => col.isShown)
+    .sort((a, b) => (a.isFixed === b.isFixed ? -1 : a.isFixed ? 0 : 1));
 
   //  Function: Export to Excel
   function handleExportToExcel() {
@@ -229,7 +232,7 @@ function Table({
       <table className="table" id="printableTable">
         <thead>
           <tr>
-            {columns
+            {sortedColumns
               .filter((col) => col.isShown)
               .map((col) => (
                 <th key={col.name}>
@@ -249,7 +252,7 @@ function Table({
             <Row
               key={index}
               row={row}
-              columns={columns}
+              columns={sortedColumns}
               onDeleteRow={onDeleteRow}
               actions={actions}
             />
@@ -337,10 +340,25 @@ function CommentsTable({
   sortByPostIdDesc,
 }) {
   const [currentPage, setCurrentPage] = useState(1);
-  const [filtertxt, setFilterTxt] = useState("");
-  const filteredData = filtertxt
-    ? data.filter((item) => item.postId === Number(filtertxt))
-    : data;
+  const [filterTxt, setFilterTxt] = useState("");
+  const [searchTxt, setSearchTxt] = useState("");
+
+  // const filteredData = filterTxt
+  //   ? data.filter((item) => item.postId === Number(filterTxt))
+  //   : data;
+
+  const filteredData = data.filter((row) => {
+    const matchesPostId = !filterTxt || row.postId === Number(filterTxt);
+
+    const matchesSearch =
+      !searchTxt ||
+      Object.values(row)
+        .join(" ")
+        .toLowerCase()
+        .includes(searchTxt.toLowerCase());
+
+    return matchesPostId && matchesSearch;
+  });
 
   const startIndex = (currentPage - 1) * pageSize;
   const endIndex = startIndex + pageSize;
@@ -363,13 +381,23 @@ function CommentsTable({
           Sort by Post ID desc
         </button>
 
-        <input
-          type="number"
-          placeholder="Filter by Post ID"
-          value={filtertxt}
-          onChange={(e) => setFilterTxt(e.target.value)}
-          style={{ margin: "10px", padding: "5px" }}
-        />
+        <div style={{ margin: "10px 0" }}>
+          <input
+            type="number"
+            placeholder="Filter by Post ID"
+            value={filterTxt}
+            onChange={(e) => setFilterTxt(e.target.value)}
+            style={{ marginRight: "10px", padding: "5px" }}
+          />
+
+          <input
+            type="text"
+            placeholder="Search in table..."
+            value={searchTxt}
+            onChange={(e) => setSearchTxt(e.target.value)}
+            style={{ padding: "5px" }}
+          />
+        </div>
       </div>
 
       <Table
