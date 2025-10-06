@@ -1,23 +1,99 @@
 import * as XLSX from "xlsx";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import "./App.css";
+
+function Row({ row, columns, rowActions, openMenuId, setOpenMenuId }) {
+  const menuRef = useRef(null);
+
+  return (
+    <tr>
+      {columns.map((col) => (
+        <td key={col.name}>{row[col.name]}</td>
+      ))}
+
+      <td style={{ position: "relative" }}>
+        <button
+          onClick={() => setOpenMenuId(openMenuId === row.id ? null : row.id)}
+          style={{
+            background: "none",
+            border: "none",
+            fontSize: "18px",
+            cursor: "pointer",
+          }}
+        >
+          ⋮
+        </button>
+
+        {openMenuId === row.id && (
+          <div
+            ref={menuRef}
+            style={{
+              position: "absolute",
+              right: 0,
+              top: "100%",
+              backgroundColor: "white",
+              border: "1px solid #ccc",
+              borderRadius: "6px",
+              boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+              zIndex: 100,
+            }}
+          >
+            {rowActions.map((action, i) => (
+              <div
+                key={i}
+                onClick={() => {
+                  action.onClick(row);
+                  setOpenMenuId(null);
+                }}
+                style={{
+                  padding: "6px 12px",
+                  cursor: "pointer",
+                  borderBottom:
+                    i !== rowActions.length - 1 ? "1px solid #eee" : "none",
+                  whiteSpace: "nowrap",
+                }}
+                onMouseEnter={(e) =>
+                  (e.target.style.backgroundColor = "#f5f5f5")
+                }
+                onMouseLeave={(e) => (e.target.style.backgroundColor = "white")}
+              >
+                {action.label}
+              </div>
+            ))}
+          </div>
+        )}
+      </td>
+    </tr>
+  );
+}
 
 function Table({
   data,
   columns,
-  onDeleteRow,
   tableTitle = "List",
-  actions = [],
+  rowActions = [],
   showExportButton = false,
   showPrintButton = false,
 }) {
-  const [showMenu, setShowMenu] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState(null); // "header" or row.id or null
+  const menuRef = useRef(null);
+
+  // 🔹 Close all menus when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setOpenMenuId(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const sortedColumns = [...columns]
     .filter((col) => col.isShown)
-    .sort((a, b) => (b.isFixed ? 1 : 0) - (a.isFixed ? 1 : 0)); //That ensures all fixed columns appear first in their original order.
-  // .sort((a, b) => (a.isFixed === b.isFixed ? -1 : a.isFixed ? 0 : 1));
+    .sort((a, b) => (b.isFixed ? 1 : 0) - (a.isFixed ? 1 : 0));
 
-  //  Function: Export to Excel
+  // 📤 Export to Excel
   function handleExportToExcel() {
     const filteredData = data.map((row) => {
       let filtered = {};
@@ -35,29 +111,24 @@ function Table({
     XLSX.writeFile(workbook, `${tableTitle}.xlsx`);
   }
 
+  // 🖨️ Print table
   function handlePrint() {
-    // 1️⃣ Get the title (without buttons)
-    const titleElement = document.querySelector(".table-title"); // adjust if your title class is different
+    const titleElement = document.querySelector(".table-title");
     const titleText = titleElement ? titleElement.textContent.trim() : "";
 
-    // 2️⃣ Get the table only
     const table = document.getElementById("printableTable");
     if (!table) {
       console.error("No table found to print!");
       return;
     }
 
-    // 3️⃣ Clone the table so we can modify it safely
     const clone = table.cloneNode(true);
 
-    // 4️⃣ Remove the last column if it’s “Actions”
+    // remove Actions column
     const headers = clone.querySelectorAll("thead th");
     let actionColIndex = -1;
-
     headers.forEach((th, i) => {
-      if (th.textContent.trim().toLowerCase() === "actions") {
-        actionColIndex = i;
-      }
+      if (th.textContent.trim().toLowerCase() === "actions") actionColIndex = i;
     });
 
     if (actionColIndex !== -1) {
@@ -69,77 +140,38 @@ function Table({
       });
     }
 
-    // 5️⃣ Open a new window for printing
     const printWindow = window.open("", "", "height=800,width=1000");
-
-    // 6️⃣ Write styled HTML with title and table
     printWindow.document.write(`
-    <html>
-      <head>
-        <title>${titleText}</title>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            margin: 30px;
-          }
-
-          h2 {
-            text-align: center;
-            margin-bottom: 20px;
-          }
-
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            page-break-inside: auto;
-          }
-
-          th, td {
-            border: 1px solid #333;
-            padding: 8px 10px;
-            text-align: left;
-            font-size: 14px;
-          }
-
-          th {
-            background-color: #f2f2f2;
-            font-weight: bold;
-          }
-
-          tr:nth-child(even) {
-            background-color: #fafafa;
-          }
-
-          /* ✅ Keep table header on every page */
-          thead { display: table-header-group; }
-
-          tr { page-break-inside: avoid; }
-
-          @media print {
-            body {
-              -webkit-print-color-adjust: exact;
-            }
-          }
-        </style>
-      </head>
-      <body>
-        <h2>${titleText}</h2>
-        ${clone.outerHTML}
-      </body>
-    </html>
-  `);
-
-    // 7️⃣ Print and close
+      <html>
+        <head>
+          <title>${titleText}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 30px; }
+            h2 { text-align: center; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; page-break-inside: auto; }
+            th, td { border: 1px solid #333; padding: 8px 10px; text-align: left; font-size: 14px; }
+            th { background-color: #f2f2f2; font-weight: bold; }
+            tr:nth-child(even) { background-color: #fafafa; }
+            thead { display: table-header-group; }
+            tr { page-break-inside: avoid; }
+            @media print { body { -webkit-print-color-adjust: exact; } }
+          </style>
+        </head>
+        <body>
+          <h2>${titleText}</h2>
+          ${clone.outerHTML}
+        </body>
+      </html>
+    `);
     printWindow.document.close();
     printWindow.print();
   }
 
-  if (!data.length || !columns.length) {
-    return <p>No data available</p>;
-  }
+  if (!data.length || !columns.length) return <p>No data available</p>;
 
   return (
-    <div className="table-container">
+    <div className="table-container" ref={menuRef}>
+      {/* Header with ⋯ button */}
       <div
         style={{
           display: "flex",
@@ -154,11 +186,13 @@ function Table({
         >
           {tableTitle}
         </h2>
-        {/* ⋯ button beside the title */}
+
         {(showExportButton || showPrintButton) && (
           <div style={{ position: "relative" }}>
             <button
-              onClick={() => setShowMenu((prev) => !prev)}
+              onClick={() =>
+                setOpenMenuId(openMenuId === "header" ? null : "header")
+              }
               style={{
                 border: "none",
                 background: "transparent",
@@ -171,7 +205,7 @@ function Table({
               ⋯
             </button>
 
-            {showMenu && (
+            {openMenuId === "header" && (
               <div
                 style={{
                   position: "absolute",
@@ -189,7 +223,7 @@ function Table({
                   <button
                     onClick={() => {
                       handleExportToExcel();
-                      setShowMenu(false);
+                      setOpenMenuId(null);
                     }}
                     style={{
                       display: "block",
@@ -204,12 +238,11 @@ function Table({
                     Export to Excel
                   </button>
                 )}
-
                 {showPrintButton && (
                   <button
                     onClick={() => {
                       handlePrint();
-                      setShowMenu(false);
+                      setOpenMenuId(null);
                     }}
                     style={{
                       display: "block",
@@ -230,20 +263,17 @@ function Table({
         )}
       </div>
 
+      {/* Table */}
       <table className="table" id="printableTable">
         <thead>
           <tr>
-            {sortedColumns
-              .filter((col) => col.isShown)
-              .map((col) => (
-                <th key={col.name}>
-                  {
-                    col.name
-                      .replace(/([A-Z])/g, " $1") // add space before capital letters
-                      .replace(/^./, (str) => str.toUpperCase()) // capitalize first letter
-                  }
-                </th>
-              ))}
+            {sortedColumns.map((col) => (
+              <th key={col.name}>
+                {col.name
+                  .replace(/([A-Z])/g, " $1")
+                  .replace(/^./, (str) => str.toUpperCase())}
+              </th>
+            ))}
             <th>Actions</th>
           </tr>
         </thead>
@@ -254,8 +284,9 @@ function Table({
               key={index}
               row={row}
               columns={sortedColumns}
-              onDeleteRow={onDeleteRow}
-              actions={actions}
+              rowActions={rowActions}
+              openMenuId={openMenuId}
+              setOpenMenuId={setOpenMenuId}
             />
           ))}
         </tbody>
@@ -264,111 +295,23 @@ function Table({
   );
 }
 
-function Row({ row, columns, actions = [] }) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  const toggleMenu = () => setIsMenuOpen((prev) => !prev);
-
-  return (
-    <tr>
-      {columns
-        .filter((col) => col.isShown)
-        .map((col) => (
-          <td key={col.name}>{row[col.name]}</td>
-        ))}
-
-      <td style={{ position: "relative" }}>
-        <button
-          onClick={toggleMenu}
-          style={{
-            background: "none",
-            border: "none",
-            fontSize: "18px",
-            cursor: "pointer",
-          }}
-        >
-          ⋮
-        </button>
-
-        {isMenuOpen && (
-          <div
-            style={{
-              position: "absolute",
-              right: 0,
-              top: "100%",
-              backgroundColor: "white",
-              border: "1px solid #ccc",
-              borderRadius: "6px",
-              boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
-              zIndex: 100,
-            }}
-          >
-            {actions.map((action, i) => (
-              <div
-                key={i}
-                onClick={() => {
-                  action.onClick(row);
-                  setIsMenuOpen(false); // close after click
-                }}
-                style={{
-                  padding: "6px 12px",
-                  cursor: "pointer",
-                  borderBottom:
-                    i !== actions.length - 1 ? "1px solid #eee" : "none",
-                  whiteSpace: "nowrap",
-                }}
-                onMouseEnter={(e) =>
-                  (e.target.style.backgroundColor = "#f5f5f5")
-                }
-                onMouseLeave={(e) => (e.target.style.backgroundColor = "white")}
-              >
-                {action.label}
-              </div>
-            ))}
-          </div>
-        )}
-      </td>
-    </tr>
-  );
-}
-
-function CommentsTable({
-  pageSize = 100,
+function HeadOfTable({
+  tableTitle = "List",
   data = [],
   columns = [],
+  pageSize = 100,
   deleteRow,
   addRow,
-  sortByPostIdDesc,
+  rowActions = [],
 }) {
   const [currentPage, setCurrentPage] = useState(1);
-  const [filterTxt, setFilterTxt] = useState("");
-  const [searchTxt, setSearchTxt] = useState("");
-
-  // const filteredData = filterTxt
-  //   ? data.filter((item) => item.postId === Number(filterTxt))
-  //   : data;
-
-  const filteredData = data.filter((row) => {
-    const matchesPostId = !filterTxt || row.postId === Number(filterTxt);
-
-    const matchesSearch =
-      !searchTxt ||
-      Object.values(row)
-        .join(" ")
-        .toLowerCase()
-        .includes(searchTxt.toLowerCase());
-
-    return matchesPostId && matchesSearch;
-  });
-
   const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  const currentItems = filteredData.slice(startIndex, endIndex);
-  const totalPages = Math.max(1, Math.ceil(filteredData.length / pageSize));
+  const currentItems = data.slice(startIndex, startIndex + pageSize);
+  const totalPages = Math.max(1, Math.ceil(data.length / pageSize));
 
   useEffect(() => {
     const newTotalPages = Math.max(1, Math.ceil(data.length / pageSize));
-    setCurrentPage((prevPage) => Math.min(prevPage, newTotalPages));
+    setCurrentPage((prev) => Math.min(prev, newTotalPages));
   }, [data]);
 
   return (
@@ -378,57 +321,24 @@ function CommentsTable({
           Add Row
         </button>
 
-        <button className="center-btn" onClick={sortByPostIdDesc}>
+        {/* <button className="center-btn" onClick={sortByPostIdDesc}>
           Sort by Post ID desc
-        </button>
-
-        <div style={{ margin: "10px 0" }}>
-          <input
-            type="number"
-            placeholder="Filter by Post ID"
-            value={filterTxt}
-            onChange={(e) => setFilterTxt(e.target.value)}
-            style={{ marginRight: "10px", padding: "5px" }}
-          />
-
-          <input
-            type="text"
-            placeholder="Search in table..."
-            value={searchTxt}
-            onChange={(e) => setSearchTxt(e.target.value)}
-            style={{ padding: "5px" }}
-          />
-        </div>
+        </button> */}
       </div>
 
       <Table
         data={currentItems}
         columns={columns}
-        onDeleteRow={deleteRow}
         pageSize={pageSize}
-        tableTitle="Comments List"
-        actions={[
-          {
-            label: "View",
-            onClick: (row) =>
-              alert(
-                Object.entries(row)
-                  .map(([key, value]) => `${key}: ${value}`)
-                  .join("\n")
-              ),
-          },
-          {
-            label: "Delete",
-            onClick: (row) => deleteRow(row),
-          },
-        ]}
+        tableTitle={tableTitle}
+        rowActions={rowActions}
         showExportButton={true}
         showPrintButton={true}
       />
 
       <div style={{ marginTop: "20px", textAlign: "center" }}>
         <button
-          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+          onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
           disabled={currentPage === 1}
           style={{ margin: "0 5px" }}
         >
@@ -449,9 +359,7 @@ function CommentsTable({
         ))}
 
         <button
-          onClick={() =>
-            setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-          }
+          onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
           disabled={currentPage === totalPages}
           style={{ margin: "0 5px" }}
         >
@@ -462,75 +370,137 @@ function CommentsTable({
   );
 }
 
+function CommentsTable({
+  data,
+  columns = [],
+  deleteRow,
+  addRow,
+  showExportButton = true,
+  showPrintButton = true,
+}) {
+  const [filterTxt, setFilterTxt] = useState("");
+  const [searchTxt, setSearchTxt] = useState("");
+  const pageSize = 100;
+  const rowActions = [
+    { label: "View", onClick: (row) => viewDetailAction(row) },
+    { label: "Delete", onClick: (row) => deleteRow(row) },
+  ];
+
+  // alert(
+  //   Object.entries(row)
+  //     .map(([key, value]) => `${key}: ${value}`)
+  //     .join("\n")
+  // ),
+
+  const filteredData = data.filter((row) => {
+    const matchesPostId = !filterTxt || row.postId === Number(filterTxt);
+    const matchesSearch =
+      !searchTxt ||
+      Object.values(row)
+        .join(" ")
+        .toLowerCase()
+        .includes(searchTxt.toLowerCase());
+    return matchesPostId && matchesSearch;
+  });
+
+  function viewDetailAction(row) {
+    alert(
+      Object.entries(row)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join("\n")
+    );
+  }
+
+  return (
+    <>
+      <div>
+        <div style={{ margin: "10px 0" }}>
+          <input
+            type="number"
+            placeholder="Filter by Post ID"
+            value={filterTxt}
+            onChange={(e) => setFilterTxt(e.target.value)}
+            style={{ marginRight: "10px", padding: "5px" }}
+          />
+
+          <input
+            type="text"
+            placeholder="Search in table..."
+            value={searchTxt}
+            onChange={(e) => setSearchTxt(e.target.value)}
+            style={{ padding: "5px" }}
+          />
+        </div>
+      </div>
+
+      <HeadOfTable
+        data={filteredData}
+        columns={columns}
+        onDeleteRow={deleteRow}
+        addRow={addRow}
+        pageSize={pageSize}
+        tableTitle="Comments List"
+        rowActions={rowActions}
+        showExportButton={showExportButton}
+        showPrintButton={showPrintButton}
+      />
+    </>
+  );
+}
+
 function App() {
   const [data, setData] = useState([]);
-  const [columns, setColumns] = useState([]); // stores column metadata (like isSortable, isShown, etc.)
+  const [columns, setColumns] = useState([]);
 
   function fetchData() {
     fetch("https://jsonplaceholder.typicode.com/comments")
-      .then((response) => response.json())
+      .then((res) => res.json())
       .then((json) => {
         setData(json);
-
         const firstRow = json[0];
         const columnsFromDb = Object.keys(firstRow);
-
         const columnMetadata = columnsFromDb.map((col) => ({
           name: col,
-          isSortable: !["body"].includes(col), // disable sorting for 'body'
-          isShown: !["email"].includes(col), // hide 'email' column for example
-          isFixed: ["id", "postId"].includes(col), // fix 'id,' and 'postId' columns
+          isSortable: !["body"].includes(col),
+          isShown: !["email"].includes(col),
+          isFixed: ["id", "postId"].includes(col),
         }));
-
-        console.log("Columns with metadata:", columnMetadata);
         setColumns(columnMetadata);
       })
-      .catch((error) => console.error("Error fetching data:", error));
+      .catch((err) => console.error("Error fetching data:", err));
   }
 
   function deleteRow(row) {
-    const updatedData = data.filter((item) => item.id !== row.id);
-    setData(updatedData);
+    setData((prev) => prev.filter((item) => item.id !== row.id));
   }
 
   function addRow() {
-    const newId =
-      data.length > 0 ? Math.max(...data.map((item) => item.id)) + 1 : 1;
+    const newId = data.length > 0 ? Math.max(...data.map((i) => i.id)) + 1 : 1;
     const newRow = {
       postId: Math.floor(Math.random() * 100) + 1,
       id: newId,
       name: `New Name ${newId}`,
       email: "demo@email.com",
     };
-
-    setData((prevData) => [...prevData, newRow]);
-
-    //setData(prevData => [newRow,...prevData]);
-    //setCurrentPage(1);
+    setData((prev) => [...prev, newRow]);
   }
 
   function sortByPostIdDesc() {
-    const sortedData = [...data].sort((a, b) => b.postId - a.postId);
-    setData(sortedData);
-    //setCurrentPage(1);
+    setData((prev) => [...prev].sort((a, b) => b.postId - a.postId));
   }
 
   return (
-    <>
-      <div className="app-container">
-        <CommentsTable
-          data={data}
-          columns={columns}
-          pageSize={100}
-          deleteRow={deleteRow}
-          addRow={addRow}
-          sortByPostIdDesc={sortByPostIdDesc}
-        />
-        <button className="center-btn" onClick={() => fetchData()}>
-          Get Data
-        </button>
-      </div>
-    </>
+    <div className="app-container">
+      <CommentsTable
+        data={data}
+        columns={columns}
+        deleteRow={deleteRow}
+        addRow={addRow}
+      />
+      <button className="center-btn" onClick={fetchData}>
+        Get Data
+      </button>
+    </div>
   );
 }
 
