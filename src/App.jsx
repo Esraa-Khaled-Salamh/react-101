@@ -1,7 +1,13 @@
 import { use, useEffect, useState } from "react";
 import "./App.css";
 
-function Table({ data, columns, onDeleteRow, tableTitle = "List" }) {
+function Table({
+  data,
+  columns,
+  onDeleteRow,
+  tableTitle = "List",
+  actions = [],
+}) {
   if (!data.length || !columns.length) {
     return <p>No data available</p>;
   }
@@ -34,6 +40,7 @@ function Table({ data, columns, onDeleteRow, tableTitle = "List" }) {
               row={row}
               columns={columns}
               onDeleteRow={onDeleteRow}
+              actions={actions}
             />
           ))}
         </tbody>
@@ -42,27 +49,69 @@ function Table({ data, columns, onDeleteRow, tableTitle = "List" }) {
   );
 }
 
-function Row({ row, columns, onDeleteRow }) {
+function Row({ row, columns, actions = [] }) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const toggleMenu = () => setIsMenuOpen((prev) => !prev);
+
   return (
     <tr>
-      {columns.map((col) => (
-        <td key={col.name}>{row[col.name]}</td>
-      ))}
+      {columns
+        .filter((col) => col.isShown)
+        .map((col) => (
+          <td key={col.name}>{row[col.name]}</td>
+        ))}
 
-      <td>
+      <td style={{ position: "relative" }}>
         <button
-          onClick={() =>
-            alert(
-              Object.entries(row)
-                .map(([key, value]) => `${key}: ${value}`)
-                .join("\n")
-            )
-          }
+          onClick={toggleMenu}
+          style={{
+            background: "none",
+            border: "none",
+            fontSize: "18px",
+            cursor: "pointer",
+          }}
         >
-          View Details
+          ⋮
         </button>
 
-        <button onClick={() => onDeleteRow(row)}>Delete</button>
+        {isMenuOpen && (
+          <div
+            style={{
+              position: "absolute",
+              right: 0,
+              top: "100%",
+              backgroundColor: "white",
+              border: "1px solid #ccc",
+              borderRadius: "6px",
+              boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+              zIndex: 100,
+            }}
+          >
+            {actions.map((action, i) => (
+              <div
+                key={i}
+                onClick={() => {
+                  action.onClick(row);
+                  setIsMenuOpen(false); // close after click
+                }}
+                style={{
+                  padding: "6px 12px",
+                  cursor: "pointer",
+                  borderBottom:
+                    i !== actions.length - 1 ? "1px solid #eee" : "none",
+                  whiteSpace: "nowrap",
+                }}
+                onMouseEnter={(e) =>
+                  (e.target.style.backgroundColor = "#f5f5f5")
+                }
+                onMouseLeave={(e) => (e.target.style.backgroundColor = "white")}
+              >
+                {action.label}
+              </div>
+            ))}
+          </div>
+        )}
       </td>
     </tr>
   );
@@ -118,6 +167,21 @@ function CommentsTable({
         onDeleteRow={deleteRow}
         pageSize={pageSize}
         tableTitle="Comments List"
+        actions={[
+          {
+            label: "View",
+            onClick: (row) =>
+              alert(
+                Object.entries(row)
+                  .map(([key, value]) => `${key}: ${value}`)
+                  .join("\n")
+              ),
+          },
+          {
+            label: "Delete",
+            onClick: (row) => deleteRow(row),
+          },
+        ]}
       />
 
       <div style={{ marginTop: "20px", textAlign: "center" }}>
