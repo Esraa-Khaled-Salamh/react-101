@@ -14,7 +14,8 @@ function Table({
   const [showMenu, setShowMenu] = useState(false);
   const sortedColumns = [...columns]
     .filter((col) => col.isShown)
-    .sort((a, b) => (a.isFixed === b.isFixed ? -1 : a.isFixed ? 0 : 1));
+    .sort((a, b) => (b.isFixed ? 1 : 0) - (a.isFixed ? 1 : 0)); //That ensures all fixed columns appear first in their original order.
+  // .sort((a, b) => (a.isFixed === b.isFixed ? -1 : a.isFixed ? 0 : 1));
 
   //  Function: Export to Excel
   function handleExportToExcel() {
