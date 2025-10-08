@@ -6,6 +6,7 @@ import "./App.css";
 
 
 function PaginationControls({currentPage, setCurrentPage,totalPages}) {
+
 return (
 
   <div style={{ marginTop: "20px", textAlign: "center" }}>
@@ -117,6 +118,8 @@ function Table({
   handleExportToExcel,
   showExportButton = false,
   showPrintButton = false,
+  handleSort,
+  sortConfig,
 }) {
   const [openMenuId, setOpenMenuId] = useState(null); // "header" or row.id or null
   const menuRef = useRef(null);
@@ -267,30 +270,21 @@ function Table({
         <thead>
           <tr>
             {sortedColumns.map((col) => (
-              <th key={col.name}>
-                {col.name
-                  .replace(/([A-Z])/g, " $1")
-                  .replace(/^./, (str) => str.toUpperCase())}
+               <th
+                key={col.name}
+               onClick={() => col.isSortable && handleSort(col.name)}
+               style={{
+               cursor: col.isSortable ? "pointer" : "default",
+              userSelect: "none",
+          }}
+            >
+               {col.name
+               .replace(/([A-Z])/g, " $1")
+               .replace(/^./, (str) => str.toUpperCase())}
 
-
-       {col.isSortable && (
-          <button
-            onClick={() => handleSort(col.key)}
-            style={{
-              marginLeft: "6px",
-              border: "none",
-              background: "transparent",
-              cursor: "pointer",
-              fontSize: "12px",
-              color: "#555",
-            }}
-          >
-            ⬍
-          </button>
-        )}
-
-
-              </th>
+             {sortConfig.key === col.name &&
+                (sortConfig.direction === "asc" ? " ▲" : " ▼")}
+                </th>
             ))}
             <th>Actions</th>
           </tr>
@@ -324,7 +318,9 @@ function TableControl({
   showExportButton=true,
   showPrintButton=true
 }) {
-   const { currentPage, setCurrentPage, totalPages, currentItems } = usePagination(data, pageSize);
+
+  const { sortedData, sortConfig, handleSort } = useSort(data);
+  const { currentPage, setCurrentPage, totalPages, currentItems } = usePagination(sortedData, pageSize);
 
  //  Export to Excel
   function handleExportToExcel() {
@@ -357,6 +353,8 @@ function TableControl({
         handlePrintAllData={handlePrintAllData}
         showExportButton={showExportButton}
         showPrintButton={showPrintButton}
+        handleSort={handleSort}
+        sortConfig={sortConfig}
       />
 
       <PaginationControls 
