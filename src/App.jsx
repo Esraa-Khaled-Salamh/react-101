@@ -2,7 +2,47 @@ import * as XLSX from "xlsx";
 import { useEffect, useState, useRef } from "react";
 import "./App.css";
 
-function Row({ row, columns, rowActions, openMenuId, setOpenMenuId }) {
+
+function PaginationControls({currentPage, setCurrentPage,totalPages}) {
+
+  
+return (
+
+  <div style={{ marginTop: "20px", textAlign: "center" }}>
+        <button
+          onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+          disabled={currentPage === 1}
+          style={{ margin: "0 5px" }}
+        >
+          Prev
+        </button>
+
+        {[...Array(totalPages)].map((_, index) => (
+          <button
+            key={index}
+            onClick={() => setCurrentPage(index + 1)}
+            style={{
+              margin: "0 5px",
+              fontWeight: currentPage === index + 1 ? "bold" : "normal",
+            }}
+          >
+            {index + 1}
+          </button>
+        ))}
+
+        <button
+          onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+          disabled={currentPage === totalPages}
+          style={{ margin: "0 5px" }}
+        >
+          Next
+        </button>
+      </div>
+);
+
+}
+
+function Row({ row, columns, rowActions, openMenuId, setOpenMenuId}) {
   const menuRef = useRef(null);
 
   return (
@@ -72,6 +112,9 @@ function Table({
   columns,
   tableTitle = "List",
   rowActions = [],
+  handlePrintCurrentPage,
+  handlePrintAllData,
+  handleExportToExcel,
   showExportButton = false,
   showPrintButton = false,
 }) {
@@ -93,79 +136,9 @@ function Table({
     .filter((col) => col.isShown)
     .sort((a, b) => (b.isFixed ? 1 : 0) - (a.isFixed ? 1 : 0));
 
-  // 📤 Export to Excel
-  function handleExportToExcel() {
-    const filteredData = data.map((row) => {
-      let filtered = {};
-      columns
-        .filter((col) => col.isShown)
-        .forEach((col) => {
-          filtered[col.name] = row[col.name];
-        });
-      return filtered;
-    });
+ 
 
-    const worksheet = XLSX.utils.json_to_sheet(filteredData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
-    XLSX.writeFile(workbook, `${tableTitle}.xlsx`);
-  }
 
-  // 🖨️ Print table
-  function handlePrint() {
-    const titleElement = document.querySelector(".table-title");
-    const titleText = titleElement ? titleElement.textContent.trim() : "";
-
-    const table = document.getElementById("printableTable");
-    if (!table) {
-      console.error("No table found to print!");
-      return;
-    }
-
-    const clone = table.cloneNode(true);
-
-    // remove Actions column
-    const headers = clone.querySelectorAll("thead th");
-    let actionColIndex = -1;
-    headers.forEach((th, i) => {
-      if (th.textContent.trim().toLowerCase() === "actions") actionColIndex = i;
-    });
-
-    if (actionColIndex !== -1) {
-      headers[actionColIndex].remove();
-      const rows = clone.querySelectorAll("tbody tr");
-      rows.forEach((row) => {
-        const cells = row.querySelectorAll("td");
-        if (cells[actionColIndex]) cells[actionColIndex].remove();
-      });
-    }
-
-    const printWindow = window.open("", "", "height=800,width=1000");
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>${titleText}</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 30px; }
-            h2 { text-align: center; margin-bottom: 20px; }
-            table { width: 100%; border-collapse: collapse; page-break-inside: auto; }
-            th, td { border: 1px solid #333; padding: 8px 10px; text-align: left; font-size: 14px; }
-            th { background-color: #f2f2f2; font-weight: bold; }
-            tr:nth-child(even) { background-color: #fafafa; }
-            thead { display: table-header-group; }
-            tr { page-break-inside: avoid; }
-            @media print { body { -webkit-print-color-adjust: exact; } }
-          </style>
-        </head>
-        <body>
-          <h2>${titleText}</h2>
-          ${clone.outerHTML}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
-  }
 
   if (!data.length || !columns.length) return <p>No data available</p>;
 
@@ -239,9 +212,10 @@ function Table({
                   </button>
                 )}
                 {showPrintButton && (
-                  <button
+                  <div>
+                     <button
                     onClick={() => {
-                      handlePrint();
+                      handlePrintCurrentPage();
                       setOpenMenuId(null);
                     }}
                     style={{
@@ -254,8 +228,33 @@ function Table({
                       cursor: "pointer",
                     }}
                   >
-                    Print
+                    Print Current Page
                   </button>
+
+
+
+                   <button
+                    onClick={() => {
+                      handlePrintAllData();
+                      setOpenMenuId(null);
+                    }}
+                    style={{
+                      display: "block",
+                      padding: "8px 16px",
+                      width: "100%",
+                      textAlign: "left",
+                      border: "none",
+                      background: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Print All
+                  </button>
+
+
+                  </div>
+                 
+                  
                 )}
               </div>
             )}
@@ -272,6 +271,25 @@ function Table({
                 {col.name
                   .replace(/([A-Z])/g, " $1")
                   .replace(/^./, (str) => str.toUpperCase())}
+
+
+       {col.isSortable && (
+          <button
+            onClick={() => handleSort(col.key)}
+            style={{
+              marginLeft: "6px",
+              border: "none",
+              background: "transparent",
+              cursor: "pointer",
+              fontSize: "12px",
+              color: "#555",
+            }}
+          >
+            ⬍
+          </button>
+        )}
+
+
               </th>
             ))}
             <th>Actions</th>
@@ -295,36 +313,190 @@ function Table({
   );
 }
 
-function HeadOfTable({
+
+
+function TableControl({
   tableTitle = "List",
-  data = [],
+  data = [], //filtered data already
   columns = [],
   pageSize = 100,
-  deleteRow,
-  addRow,
   rowActions = [],
+  showExportButton=true,
+  showPrintButton=true
 }) {
-  const [currentPage, setCurrentPage] = useState(1);
-  const startIndex = (currentPage - 1) * pageSize;
-  const currentItems = data.slice(startIndex, startIndex + pageSize);
-  const totalPages = Math.max(1, Math.ceil(data.length / pageSize));
+   const [currentPage, setCurrentPage] = useState(1);
+   const totalPages = Math.max(1, Math.ceil( data.length/ pageSize)); 
+   const startIndex = (currentPage - 1) * pageSize; 
+   const currentItems = data.slice(startIndex, startIndex + pageSize);
+ 
+  
 
   useEffect(() => {
     const newTotalPages = Math.max(1, Math.ceil(data.length / pageSize));
     setCurrentPage((prev) => Math.min(prev, newTotalPages));
   }, [data]);
 
-  return (
-    <>
-      <div>
-        <button className="center-btn" onClick={addRow}>
-          Add Row
-        </button>
 
-        {/* <button className="center-btn" onClick={sortByPostIdDesc}>
-          Sort by Post ID desc
-        </button> */}
-      </div>
+ //  Export to Excel
+  function handleExportToExcel() {
+    const filteredData = data.map((row) => {
+      let filtered = {};
+      columns
+        .filter((col) => col.isShown)
+        .forEach((col) => {
+          filtered[col.name] = row[col.name];
+        });
+      return filtered;
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(filteredData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
+    XLSX.writeFile(workbook, `${tableTitle}.xlsx`);
+  }
+
+
+  //  Print table
+  function handlePrintCurrentPage() {
+    const titleElement = document.querySelector(".table-title");
+    const titleText = titleElement ? titleElement.textContent.trim() : "";
+
+    const table = document.getElementById("printableTable");
+    if (!table) {
+      console.error("No table found to print!");
+      return;
+    }
+
+    const clone = table.cloneNode(true);
+
+    // remove Actions column
+    const headers = clone.querySelectorAll("thead th");
+    let actionColIndex = -1;
+    headers.forEach((th, i) => {
+      if (th.textContent.trim().toLowerCase() === "actions") actionColIndex = i;
+    });
+
+    if (actionColIndex !== -1) {
+      headers[actionColIndex].remove();
+      const rows = clone.querySelectorAll("tbody tr");
+      rows.forEach((row) => {
+        const cells = row.querySelectorAll("td");
+        if (cells[actionColIndex]) cells[actionColIndex].remove();
+      });
+    }
+
+    const printWindow = window.open("", "", "height=800,width=1000");
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>${titleText}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 30px; }
+            h2 { text-align: center; margin-bottom: 20px; }
+            table { width: 100%; border-collapse: collapse; page-break-inside: auto; }
+            th, td { border: 1px solid #333; padding: 8px 10px; text-align: left; font-size: 14px; }
+            th { background-color: #f2f2f2; font-weight: bold; }
+            tr:nth-child(even) { background-color: #fafafa; }
+            thead { display: table-header-group; }
+            tr { page-break-inside: avoid; }
+            @media print { body { -webkit-print-color-adjust: exact; } }
+          </style>
+        </head>
+        <body>
+          <h2>${titleText}</h2>
+          ${clone.outerHTML}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  }
+
+
+ //  Print All
+  function handlePrintAllData() {
+   
+if (!data || data.length === 0) {
+    alert("No data to print");
+    return;
+  }
+
+  // 🧭 Get the columns that should be shown
+  const visibleColumns = columns.filter((col) => col.isShown);
+
+  // 🧱 Build table header HTML
+  const headerHTML = `
+    <thead>
+      <tr>
+        ${visibleColumns
+          .map(
+            (col) =>
+              `<th>${col.name
+                .replace(/([A-Z])/g, " $1")
+                .replace(/^./, (str) => str.toUpperCase())}</th>`
+          )
+          .join("")}
+      </tr>
+    </thead>
+  `;
+
+  // 🧱 Build table body HTML for all data rows
+  const bodyHTML = `
+    <tbody>
+      ${data
+        .map(
+          (row) => `
+          <tr>
+            ${visibleColumns
+              .map((col) => `<td>${row[col.name] ?? ""}</td>`)
+              .join("")}
+          </tr>`
+        )
+        .join("")}
+    </tbody>
+  `;
+
+  // 🧩 Combine everything
+  const fullTableHTML = `
+    <table style="width: 100%; border-collapse: collapse;">
+      ${headerHTML}
+      ${bodyHTML}
+    </table>
+  `;
+
+  // 🪄 Open new window for print
+  const printWindow = window.open("", "", "height=800,width=1000");
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>${tableTitle}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 30px; }
+          h2 { text-align: center; margin-bottom: 20px; }
+          table { width: 100%; border-collapse: collapse; page-break-inside: auto; }
+          th, td { border: 1px solid #333; padding: 8px 10px; text-align: left; font-size: 14px; }
+          th { background-color: #f2f2f2; font-weight: bold; }
+          tr:nth-child(even) { background-color: #fafafa; }
+          thead { display: table-header-group; }
+          tr { page-break-inside: avoid; }
+          @media print { body { -webkit-print-color-adjust: exact; } }
+        </style>
+      </head>
+      <body>
+        <h2>${tableTitle}</h2>
+        ${fullTableHTML}
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.print();
+   
+  }
+
+
+   return (
+    <>
+      
 
       <Table
         data={currentItems}
@@ -332,11 +504,16 @@ function HeadOfTable({
         pageSize={pageSize}
         tableTitle={tableTitle}
         rowActions={rowActions}
-        showExportButton={true}
-        showPrintButton={true}
+        handlePrintCurrentPage={handlePrintCurrentPage}
+        handleExportToExcel={handleExportToExcel}
+        handlePrintAllData={handlePrintAllData}
+        showExportButton={showExportButton}
+        showPrintButton={showPrintButton}
       />
 
-      <div style={{ marginTop: "20px", textAlign: "center" }}>
+      <PaginationControls currentPage={currentPage} setCurrentPage={setCurrentPage} totalPages={totalPages} ></PaginationControls>
+
+      {/* <div style={{ marginTop: "20px", textAlign: "center" }}>
         <button
           onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
           disabled={currentPage === 1}
@@ -365,19 +542,18 @@ function HeadOfTable({
         >
           Next
         </button>
-      </div>
+      </div> */}
     </>
   );
 }
 
-function CommentsTable({
-  data,
-  columns = [],
-  deleteRow,
-  addRow,
-  showExportButton = true,
-  showPrintButton = true,
-}) {
+
+
+
+
+function CommentsTable({data=[], addRow, deleteRow}) {
+ 
+  const [columns, setColumns] = useState([]);
   const [filterTxt, setFilterTxt] = useState("");
   const [searchTxt, setSearchTxt] = useState("");
   const pageSize = 100;
@@ -385,6 +561,28 @@ function CommentsTable({
     { label: "View", onClick: (row) => viewDetailAction(row) },
     { label: "Delete", onClick: (row) => deleteRow(row) },
   ];
+
+
+useEffect(() => {
+   if (data.length > 0) {
+    const firstRow = data[0];
+    const columnsFromDb = Object.keys(firstRow);
+    const columnMetadata = columnsFromDb.map((col) => ({
+      name: col,
+      isSortable: !["body"].includes(col),
+      isShown: !["email"].includes(col),
+      isFixed: ["id", "postId"].includes(col),
+    }));
+    setColumns(columnMetadata);
+  }
+}, [data]);
+      
+
+
+
+// function sortByPostIdDesc() {
+  //   setData((prev) => [...prev].sort((a, b) => b.postId - a.postId));
+  // }
 
   // alert(
   //   Object.entries(row)
@@ -430,45 +628,39 @@ function CommentsTable({
             onChange={(e) => setSearchTxt(e.target.value)}
             style={{ padding: "5px" }}
           />
+
+        <div>
+        <button className="center-btn" onClick={addRow}>
+          Add Row
+        </button>
+
+        {/* <button className="center-btn" onClick={sortByPostIdDesc}>
+          Sort by Post ID desc
+        </button> */}
+      </div>
+
         </div>
       </div>
 
-      <HeadOfTable
+      <TableControl
         data={filteredData}
         columns={columns}
-        onDeleteRow={deleteRow}
-        addRow={addRow}
         pageSize={pageSize}
         tableTitle="Comments List"
         rowActions={rowActions}
-        showExportButton={showExportButton}
-        showPrintButton={showPrintButton}
+        showExportButton={true}
+        showPrintButton={true}
       />
     </>
   );
 }
 
-function App() {
-  const [data, setData] = useState([]);
-  const [columns, setColumns] = useState([]);
 
-  function fetchData() {
-    fetch("https://jsonplaceholder.typicode.com/comments")
-      .then((res) => res.json())
-      .then((json) => {
-        setData(json);
-        const firstRow = json[0];
-        const columnsFromDb = Object.keys(firstRow);
-        const columnMetadata = columnsFromDb.map((col) => ({
-          name: col,
-          isSortable: !["body"].includes(col),
-          isShown: !["email"].includes(col),
-          isFixed: ["id", "postId"].includes(col),
-        }));
-        setColumns(columnMetadata);
-      })
-      .catch((err) => console.error("Error fetching data:", err));
-  }
+
+function App() {
+
+  const [data, setData] = useState([]);
+
 
   function deleteRow(row) {
     setData((prev) => prev.filter((item) => item.id !== row.id));
@@ -485,18 +677,24 @@ function App() {
     setData((prev) => [...prev, newRow]);
   }
 
-  function sortByPostIdDesc() {
-    setData((prev) => [...prev].sort((a, b) => b.postId - a.postId));
+
+
+  function fetchData() {
+    fetch("https://jsonplaceholder.typicode.com/comments")
+      .then((res) => res.json())
+      .then((json) => {
+       setData(json);
+       console.log("Data fetched:", json);
+      })
+      .catch((err) => console.error("Error fetching data:", err));
   }
+
+
+  
 
   return (
     <div className="app-container">
-      <CommentsTable
-        data={data}
-        columns={columns}
-        deleteRow={deleteRow}
-        addRow={addRow}
-      />
+      <CommentsTable data={data}  addRow={addRow} deleteRow={deleteRow}/>
       <button className="center-btn" onClick={fetchData}>
         Get Data
       </button>
