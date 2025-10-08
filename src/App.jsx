@@ -1,11 +1,11 @@
 import { exportToExcel, printCurrentTableElement, printAllData } from "./Utils/ExportUtils";
+import { usePagination } from "./Hooks/usePagination";
+import { useSort } from "./Hooks/useSort";
 import { useEffect, useState, useRef } from "react";
 import "./App.css";
 
 
 function PaginationControls({currentPage, setCurrentPage,totalPages}) {
-
-  
 return (
 
   <div style={{ marginTop: "20px", textAlign: "center" }}>
@@ -324,17 +324,7 @@ function TableControl({
   showExportButton=true,
   showPrintButton=true
 }) {
-   const [currentPage, setCurrentPage] = useState(1);
-   const totalPages = Math.max(1, Math.ceil( data.length/ pageSize)); 
-   const startIndex = (currentPage - 1) * pageSize; 
-   const currentItems = data.slice(startIndex, startIndex + pageSize);
- 
-  
-
-  useEffect(() => {
-    const newTotalPages = Math.max(1, Math.ceil(data.length / pageSize));
-    setCurrentPage((prev) => Math.min(prev, newTotalPages));
-  }, [data]);
+   const { currentPage, setCurrentPage, totalPages, currentItems } = usePagination(data, pageSize);
 
  //  Export to Excel
   function handleExportToExcel() {
@@ -369,38 +359,11 @@ function TableControl({
         showPrintButton={showPrintButton}
       />
 
-      <PaginationControls currentPage={currentPage} setCurrentPage={setCurrentPage} totalPages={totalPages} ></PaginationControls>
+      <PaginationControls 
+      currentPage={currentPage}
+       setCurrentPage={setCurrentPage}
+        totalPages={totalPages} ></PaginationControls>
 
-      {/* <div style={{ marginTop: "20px", textAlign: "center" }}>
-        <button
-          onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-          disabled={currentPage === 1}
-          style={{ margin: "0 5px" }}
-        >
-          Prev
-        </button>
-
-        {[...Array(totalPages)].map((_, index) => (
-          <button
-            key={index}
-            onClick={() => setCurrentPage(index + 1)}
-            style={{
-              margin: "0 5px",
-              fontWeight: currentPage === index + 1 ? "bold" : "normal",
-            }}
-          >
-            {index + 1}
-          </button>
-        ))}
-
-        <button
-          onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-          disabled={currentPage === totalPages}
-          style={{ margin: "0 5px" }}
-        >
-          Next
-        </button>
-      </div> */}
     </>
   );
 }
