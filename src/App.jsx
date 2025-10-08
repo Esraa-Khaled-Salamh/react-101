@@ -1,4 +1,4 @@
-import * as XLSX from "xlsx";
+import { exportToExcel, printCurrentTableElement, printAllData } from "./Utils/ExportUtils";
 import { useEffect, useState, useRef } from "react";
 import "./App.css";
 
@@ -336,168 +336,26 @@ function TableControl({
     setCurrentPage((prev) => Math.min(prev, newTotalPages));
   }, [data]);
 
-
  //  Export to Excel
   function handleExportToExcel() {
-    const filteredData = data.map((row) => {
-      let filtered = {};
-      columns
-        .filter((col) => col.isShown)
-        .forEach((col) => {
-          filtered[col.name] = row[col.name];
-        });
-      return filtered;
-    });
-
-    const worksheet = XLSX.utils.json_to_sheet(filteredData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
-    XLSX.writeFile(workbook, `${tableTitle}.xlsx`);
+    exportToExcel({ data, columns, fileName: tableTitle });
   }
-
-
   //  Print table
   function handlePrintCurrentPage() {
-    const titleElement = document.querySelector(".table-title");
-    const titleText = titleElement ? titleElement.textContent.trim() : "";
-
-    const table = document.getElementById("printableTable");
-    if (!table) {
-      console.error("No table found to print!");
-      return;
-    }
-
-    const clone = table.cloneNode(true);
-
-    // remove Actions column
-    const headers = clone.querySelectorAll("thead th");
-    let actionColIndex = -1;
-    headers.forEach((th, i) => {
-      if (th.textContent.trim().toLowerCase() === "actions") actionColIndex = i;
-    });
-
-    if (actionColIndex !== -1) {
-      headers[actionColIndex].remove();
-      const rows = clone.querySelectorAll("tbody tr");
-      rows.forEach((row) => {
-        const cells = row.querySelectorAll("td");
-        if (cells[actionColIndex]) cells[actionColIndex].remove();
-      });
-    }
-
-    const printWindow = window.open("", "", "height=800,width=1000");
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>${titleText}</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 30px; }
-            h2 { text-align: center; margin-bottom: 20px; }
-            table { width: 100%; border-collapse: collapse; page-break-inside: auto; }
-            th, td { border: 1px solid #333; padding: 8px 10px; text-align: left; font-size: 14px; }
-            th { background-color: #f2f2f2; font-weight: bold; }
-            tr:nth-child(even) { background-color: #fafafa; }
-            thead { display: table-header-group; }
-            tr { page-break-inside: avoid; }
-            @media print { body { -webkit-print-color-adjust: exact; } }
-          </style>
-        </head>
-        <body>
-          <h2>${titleText}</h2>
-          ${clone.outerHTML}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
+     // prints the currently rendered table with id "printableTable"
+     printCurrentTableElement("printableTable", tableTitle);
   }
 
 
  //  Print All
   function handlePrintAllData() {
-   
-if (!data || data.length === 0) {
-    alert("No data to print");
-    return;
-  }
-
-  // 🧭 Get the columns that should be shown
-  const visibleColumns = columns.filter((col) => col.isShown);
-
-  // 🧱 Build table header HTML
-  const headerHTML = `
-    <thead>
-      <tr>
-        ${visibleColumns
-          .map(
-            (col) =>
-              `<th>${col.name
-                .replace(/([A-Z])/g, " $1")
-                .replace(/^./, (str) => str.toUpperCase())}</th>`
-          )
-          .join("")}
-      </tr>
-    </thead>
-  `;
-
-  // 🧱 Build table body HTML for all data rows
-  const bodyHTML = `
-    <tbody>
-      ${data
-        .map(
-          (row) => `
-          <tr>
-            ${visibleColumns
-              .map((col) => `<td>${row[col.name] ?? ""}</td>`)
-              .join("")}
-          </tr>`
-        )
-        .join("")}
-    </tbody>
-  `;
-
-  // 🧩 Combine everything
-  const fullTableHTML = `
-    <table style="width: 100%; border-collapse: collapse;">
-      ${headerHTML}
-      ${bodyHTML}
-    </table>
-  `;
-
-  // 🪄 Open new window for print
-  const printWindow = window.open("", "", "height=800,width=1000");
-  printWindow.document.write(`
-    <html>
-      <head>
-        <title>${tableTitle}</title>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 30px; }
-          h2 { text-align: center; margin-bottom: 20px; }
-          table { width: 100%; border-collapse: collapse; page-break-inside: auto; }
-          th, td { border: 1px solid #333; padding: 8px 10px; text-align: left; font-size: 14px; }
-          th { background-color: #f2f2f2; font-weight: bold; }
-          tr:nth-child(even) { background-color: #fafafa; }
-          thead { display: table-header-group; }
-          tr { page-break-inside: avoid; }
-          @media print { body { -webkit-print-color-adjust: exact; } }
-        </style>
-      </head>
-      <body>
-        <h2>${tableTitle}</h2>
-        ${fullTableHTML}
-      </body>
-    </html>
-  `);
-  printWindow.document.close();
-  printWindow.print();
-   
+      printAllData({ data, columns, title: tableTitle });
   }
 
 
    return (
     <>
       
-
       <Table
         data={currentItems}
         columns={columns}
