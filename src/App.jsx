@@ -282,7 +282,7 @@ function Table({
                .replace(/([A-Z])/g, " $1")
                .replace(/^./, (str) => str.toUpperCase())}
 
-             {sortConfig.key === col.name &&
+               {sortConfig.key === col.name &&
                 (sortConfig.direction === "asc" ? " ▲" : " ▼")}
                 </th>
             ))}
@@ -383,7 +383,7 @@ function CommentsTable({data=[], addRow, deleteRow}) {
 
 
 useEffect(() => {
-   if (data.length > 0) {
+   if (columns.length === 0 && data.length > 0) {
     const firstRow = data[0];
     const columnsFromDb = Object.keys(firstRow);
     const columnMetadata = columnsFromDb.map((col) => ({
@@ -394,7 +394,7 @@ useEffect(() => {
     }));
     setColumns(columnMetadata);
   }
-}, [data]);
+}, [data,columns.length]);
       
 
 
