@@ -43,6 +43,106 @@ return (
 
 }
 
+
+function ColoredRow({ row, columns }) {
+  return (
+    <tr style={{ background: row.id % 2 === 0 ? "#f9f9f9" : "white" }}>
+      {columns.map((col) => (
+        <td key={col.name}>
+          {col.name === "email" ? (
+            <strong style={{ color: "blue" }}>{row[col.name]}</strong>
+          ) : (
+            row[col.name]
+          )}
+        </td>
+      ))}
+    </tr>
+  );
+}
+
+function InlineActionRow({ row, columns, rowActions }) {
+  return (
+    <tr>
+      {columns.map((col) => (
+        <td key={col.name}>{row[col.name]}</td>
+      ))}
+      <td>
+        {rowActions.map((action, i) => (
+          <button
+            key={i}
+            onClick={() => action.onClick(row)}
+            style={{ margin: "0 5px" }}
+          >
+            {action.label}
+          </button>
+        ))}
+      </td>
+    </tr>
+  );
+}
+
+
+function DefaultRow({ row, columns, rowActions, openMenuId, setOpenMenuId }) {
+  const menuRef = useRef(null);
+
+  return (
+    <tr>
+      {columns.map((col) => (
+        <td key={col.name}>{row[col.name]}</td>
+      ))}
+
+      <td style={{ position: "relative" }}>
+        <button
+          onClick={() => setOpenMenuId(openMenuId === row.id ? null : row.id)}
+          style={{
+            background: "none",
+            border: "none",
+            fontSize: "18px",
+            cursor: "pointer",
+          }}
+        >
+          ⋮
+        </button>
+
+        {openMenuId === row.id && (
+          <div
+            ref={menuRef}
+            style={{
+              position: "absolute",
+              right: 0,
+              top: "100%",
+              backgroundColor: "white",
+              border: "1px solid #ccc",
+              borderRadius: "6px",
+              boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+              zIndex: 100,
+            }}
+          >
+            {rowActions.map((action, i) => (
+              <div
+                key={i}
+                onClick={() => {
+                  action.onClick(row);
+                  setOpenMenuId(null);
+                }}
+                style={{
+                  padding: "6px 12px",
+                  cursor: "pointer",
+                  borderBottom:
+                    i !== rowActions.length - 1 ? "1px solid #eee" : "none",
+                }}
+              >
+                {action.label}
+              </div>
+            ))}
+          </div>
+        )}
+      </td>
+    </tr>
+  );
+}
+
+
 function Row({ row, columns, rowActions, openMenuId, setOpenMenuId}) {
   const menuRef = useRef(null);
 
@@ -111,6 +211,7 @@ function Row({ row, columns, rowActions, openMenuId, setOpenMenuId}) {
 function Table({
   data,
   columns,
+  RowComponent,
   tableTitle = "List",
   rowActions = [],
   handlePrintCurrentPage,
@@ -290,17 +391,17 @@ function Table({
           </tr>
         </thead>
 
-        <tbody>
-          {data.map((row, index) => (
-            <Row
-              key={index}
-              row={row}
-              columns={sortedColumns}
-              rowActions={rowActions}
-              openMenuId={openMenuId}
-              setOpenMenuId={setOpenMenuId}
-            />
-          ))}
+         <tbody>
+              {data.map((row, index) => (
+                   <RowComponent
+                   key={index}
+                   row={row}
+                   columns={sortedColumns}
+                   rowActions={rowActions}
+                   openMenuId={openMenuId}
+                   setOpenMenuId={setOpenMenuId}
+              />
+        ))}
         </tbody>
       </table>
     </div>
@@ -313,6 +414,7 @@ function TableControl({
   tableTitle = "List",
   data = [], //filtered data already
   columns = [],
+  RowComponent = DefaultRow,
   pageSize = 100,
   rowActions = [],
   showExportButton=true,
@@ -345,6 +447,7 @@ function TableControl({
       <Table
         data={currentItems}
         columns={columns}
+        RowComponent={RowComponent}
         pageSize={pageSize}
         tableTitle={tableTitle}
         rowActions={rowActions}
@@ -464,6 +567,7 @@ useEffect(() => {
       <TableControl
         data={filteredData}
         columns={columns}
+        RowComponent={InlineActionRow}
         pageSize={pageSize}
         tableTitle="Comments List"
         rowActions={rowActions}
