@@ -1,48 +1,48 @@
-import { exportToExcel, printCurrentTableElement, printAllData } from "./Utils/ExportUtils";
+import {
+  exportToExcel,
+  printCurrentTableElement,
+  printAllData,
+} from "./Utils/ExportUtils";
 import { usePagination } from "./Hooks/usePagination";
 import { useSort } from "./Hooks/useSort";
 import { useEffect, useState, useRef } from "react";
 import "./App.css";
+import "tailwindcss";
 
+function PaginationControls({ currentPage, setCurrentPage, totalPages }) {
+  return (
+    <div style={{ marginTop: "20px", textAlign: "center" }}>
+      <button
+        onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+        disabled={currentPage === 1}
+        style={{ margin: "0 5px" }}
+      >
+        Prev
+      </button>
 
-function PaginationControls({currentPage, setCurrentPage,totalPages}) {
-
-return (
-
-  <div style={{ marginTop: "20px", textAlign: "center" }}>
+      {[...Array(totalPages)].map((_, index) => (
         <button
-          onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-          disabled={currentPage === 1}
-          style={{ margin: "0 5px" }}
+          key={index}
+          onClick={() => setCurrentPage(index + 1)}
+          style={{
+            margin: "0 5px",
+            fontWeight: currentPage === index + 1 ? "bold" : "normal",
+          }}
         >
-          Prev
+          {index + 1}
         </button>
+      ))}
 
-        {[...Array(totalPages)].map((_, index) => (
-          <button
-            key={index}
-            onClick={() => setCurrentPage(index + 1)}
-            style={{
-              margin: "0 5px",
-              fontWeight: currentPage === index + 1 ? "bold" : "normal",
-            }}
-          >
-            {index + 1}
-          </button>
-        ))}
-
-        <button
-          onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-          disabled={currentPage === totalPages}
-          style={{ margin: "0 5px" }}
-        >
-          Next
-        </button>
-      </div>
-);
-
+      <button
+        onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+        disabled={currentPage === totalPages}
+        style={{ margin: "0 5px" }}
+      >
+        Next
+      </button>
+    </div>
+  );
 }
-
 
 function ColoredRow({ row, columns }) {
   return (
@@ -80,7 +80,6 @@ function InlineActionRow({ row, columns, rowActions }) {
     </tr>
   );
 }
-
 
 function DefaultRow({ row, columns, rowActions, openMenuId, setOpenMenuId }) {
   const menuRef = useRef(null);
@@ -142,8 +141,7 @@ function DefaultRow({ row, columns, rowActions, openMenuId, setOpenMenuId }) {
   );
 }
 
-
-function Row({ row, columns, rowActions, openMenuId, setOpenMenuId}) {
+function Row({ row, columns, rowActions, openMenuId, setOpenMenuId }) {
   const menuRef = useRef(null);
 
   return (
@@ -240,14 +238,10 @@ function Table({
     .filter((col) => col.isShown)
     .sort((a, b) => (b.isFixed ? 1 : 0) - (a.isFixed ? 1 : 0));
 
- 
-
-
-
   if (!data.length || !columns.length) return <p>No data available</p>;
 
   return (
-    <div className="table-container" ref={menuRef}>
+    <div className="w-screen" ref={menuRef}>
       {/* Header with ⋯ button */}
       <div
         style={{
@@ -317,48 +311,42 @@ function Table({
                 )}
                 {showPrintButton && (
                   <div>
-                     <button
-                    onClick={() => {
-                      handlePrintCurrentPage();
-                      setOpenMenuId(null);
-                    }}
-                    style={{
-                      display: "block",
-                      padding: "8px 16px",
-                      width: "100%",
-                      textAlign: "left",
-                      border: "none",
-                      background: "none",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Print Current Page
-                  </button>
+                    <button
+                      onClick={() => {
+                        handlePrintCurrentPage();
+                        setOpenMenuId(null);
+                      }}
+                      style={{
+                        display: "block",
+                        padding: "8px 16px",
+                        width: "100%",
+                        textAlign: "left",
+                        border: "none",
+                        background: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Print Current Page
+                    </button>
 
-
-
-                   <button
-                    onClick={() => {
-                      handlePrintAllData();
-                      setOpenMenuId(null);
-                    }}
-                    style={{
-                      display: "block",
-                      padding: "8px 16px",
-                      width: "100%",
-                      textAlign: "left",
-                      border: "none",
-                      background: "none",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Print All
-                  </button>
-
-
+                    <button
+                      onClick={() => {
+                        handlePrintAllData();
+                        setOpenMenuId(null);
+                      }}
+                      style={{
+                        display: "block",
+                        padding: "8px 16px",
+                        width: "100%",
+                        textAlign: "left",
+                        border: "none",
+                        background: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Print All
+                    </button>
                   </div>
-                 
-                  
                 )}
               </div>
             )}
@@ -367,48 +355,53 @@ function Table({
       </div>
 
       {/* Table */}
-      <table className="table" id="printableTable">
-        <thead>
-          <tr>
-            {sortedColumns.map((col) => (
-               <th
-                key={col.name}
-               onClick={() => col.isSortable && handleSort(col.name)}
-               style={{
-               cursor: col.isSortable ? "pointer" : "default",
-              userSelect: "none",
-          }}
-            >
-               {col.name
-               .replace(/([A-Z])/g, " $1")
-               .replace(/^./, (str) => str.toUpperCase())}
 
-               {sortConfig.key === col.name &&
-                (sortConfig.direction === "asc" ? " ▲" : " ▼")}
+      <div className="w-full overflow-x-auto max-h-[700px] overflow-y-auto">
+        <table
+          className="min-w-full border-separate border border-gray-200 bg-white shadow-sm rounded-xl"
+          id="printableTable"
+        >
+          <thead className="bg-gray-100 text-gray-700 text-sm uppercase sticky top-0 z-20">
+            <tr className="divide-x divide-gray-200 ">
+              {sortedColumns.map((col) => (
+                <th
+                  className="py-3 px-4 text-center sticky left-0 bg-gray-100 z-30"
+                  key={col.name}
+                  onClick={() => col.isSortable && handleSort(col.name)}
+                  style={{
+                    cursor: col.isSortable ? "pointer" : "default",
+                    userSelect: "none",
+                  }}
+                >
+                  {col.name
+                    .replace(/([A-Z])/g, " $1")
+                    .replace(/^./, (str) => str.toUpperCase())}
+
+                  {sortConfig.key === col.name &&
+                    (sortConfig.direction === "asc" ? " ▲" : " ▼")}
                 </th>
-            ))}
-            <th>Actions</th>
-          </tr>
-        </thead>
+              ))}
+              <th>Actions</th>
+            </tr>
+          </thead>
 
-         <tbody>
-              {data.map((row, index) => (
-                   <RowComponent
-                   key={index}
-                   row={row}
-                   columns={sortedColumns}
-                   rowActions={rowActions}
-                   openMenuId={openMenuId}
-                   setOpenMenuId={setOpenMenuId}
+          <tbody className="divide-y divide-gray-200 text-gray-600">
+            {data.map((row, index) => (
+              <RowComponent
+                key={index}
+                row={row}
+                columns={sortedColumns}
+                rowActions={rowActions}
+                openMenuId={openMenuId}
+                setOpenMenuId={setOpenMenuId}
               />
-        ))}
-        </tbody>
-      </table>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
-
-
 
 function TableControl({
   tableTitle = "List",
@@ -417,33 +410,30 @@ function TableControl({
   RowComponent = DefaultRow,
   pageSize = 100,
   rowActions = [],
-  showExportButton=true,
-  showPrintButton=true
+  showExportButton = true,
+  showPrintButton = true,
 }) {
-
   const { sortedData, sortConfig, handleSort } = useSort(data);
-  const { currentPage, setCurrentPage, totalPages, currentItems } = usePagination(sortedData, pageSize);
+  const { currentPage, setCurrentPage, totalPages, currentItems } =
+    usePagination(sortedData, pageSize);
 
- //  Export to Excel
+  //  Export to Excel
   function handleExportToExcel() {
     exportToExcel({ data, columns, fileName: tableTitle });
   }
   //  Print table
   function handlePrintCurrentPage() {
-     // prints the currently rendered table with id "printableTable"
-     printCurrentTableElement("printableTable", tableTitle);
+    // prints the currently rendered table with id "printableTable"
+    printCurrentTableElement("printableTable", tableTitle);
   }
 
-
- //  Print All
+  //  Print All
   function handlePrintAllData() {
-      printAllData({ data, columns, title: tableTitle });
+    printAllData({ data, columns, title: tableTitle });
   }
 
-
-   return (
+  return (
     <>
-      
       <Table
         data={currentItems}
         columns={columns}
@@ -460,21 +450,16 @@ function TableControl({
         sortConfig={sortConfig}
       />
 
-      <PaginationControls 
-      currentPage={currentPage}
-       setCurrentPage={setCurrentPage}
-        totalPages={totalPages} ></PaginationControls>
-
+      <PaginationControls
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+        totalPages={totalPages}
+      ></PaginationControls>
     </>
   );
 }
 
-
-
-
-
-function CommentsTable({data=[], addRow, deleteRow}) {
- 
+function CommentsTable({ data = [], addRow, deleteRow }) {
   const [columns, setColumns] = useState([]);
   const [filterTxt, setFilterTxt] = useState("");
   const [searchTxt, setSearchTxt] = useState("");
@@ -484,25 +469,21 @@ function CommentsTable({data=[], addRow, deleteRow}) {
     { label: "Delete", onClick: (row) => deleteRow(row) },
   ];
 
+  useEffect(() => {
+    if (columns.length === 0 && data.length > 0) {
+      const firstRow = data[0];
+      const columnsFromDb = Object.keys(firstRow);
+      const columnMetadata = columnsFromDb.map((col) => ({
+        name: col,
+        isSortable: !["body"].includes(col),
+        isShown: !["email"].includes(col),
+        isFixed: ["id", "postId"].includes(col),
+      }));
+      setColumns(columnMetadata);
+    }
+  }, [data, columns.length]);
 
-useEffect(() => {
-   if (columns.length === 0 && data.length > 0) {
-    const firstRow = data[0];
-    const columnsFromDb = Object.keys(firstRow);
-    const columnMetadata = columnsFromDb.map((col) => ({
-      name: col,
-      isSortable: !["body"].includes(col),
-      isShown: !["email"].includes(col),
-      isFixed: ["id", "postId"].includes(col),
-    }));
-    setColumns(columnMetadata);
-  }
-}, [data,columns.length]);
-      
-
-
-
-// function sortByPostIdDesc() {
+  // function sortByPostIdDesc() {
   //   setData((prev) => [...prev].sort((a, b) => b.postId - a.postId));
   // }
 
@@ -534,13 +515,13 @@ useEffect(() => {
   return (
     <>
       <div>
-        <div style={{ margin: "10px 0" }}>
+        <div className="my-[10px]">
           <input
             type="number"
             placeholder="Filter by Post ID"
             value={filterTxt}
             onChange={(e) => setFilterTxt(e.target.value)}
-            style={{ marginRight: "10px", padding: "5px" }}
+            className="mr-2 p-1 border border-gray-300 rounded"
           />
 
           <input
@@ -548,19 +529,21 @@ useEffect(() => {
             placeholder="Search in table..."
             value={searchTxt}
             onChange={(e) => setSearchTxt(e.target.value)}
-            style={{ padding: "5px" }}
+            className="p-1 border border-gray-300 rounded"
           />
 
-        <div>
-        <button className="center-btn" onClick={addRow}>
-          Add Row
-        </button>
+          <div>
+            <button
+              className="block mx-auto my-5 px-5 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-md cursor-pointer transition-colors duration-200 ease-in-out hover:bg-blue-700"
+              onClick={addRow}
+            >
+              Add Row
+            </button>
 
-        {/* <button className="center-btn" onClick={sortByPostIdDesc}>
+            {/* <button className="center-btn" onClick={sortByPostIdDesc}>
           Sort by Post ID desc
         </button> */}
-      </div>
-
+          </div>
         </div>
       </div>
 
@@ -578,12 +561,8 @@ useEffect(() => {
   );
 }
 
-
-
 function App() {
-
   const [data, setData] = useState([]);
-
 
   function deleteRow(row) {
     setData((prev) => prev.filter((item) => item.id !== row.id));
@@ -600,24 +579,19 @@ function App() {
     setData((prev) => [...prev, newRow]);
   }
 
-
-
   function fetchData() {
     fetch("https://jsonplaceholder.typicode.com/comments")
       .then((res) => res.json())
       .then((json) => {
-       setData(json);
-       console.log("Data fetched:", json);
+        setData(json);
+        console.log("Data fetched:", json);
       })
       .catch((err) => console.error("Error fetching data:", err));
   }
 
-
-  
-
   return (
-    <div className="app-container">
-      <CommentsTable data={data}  addRow={addRow} deleteRow={deleteRow}/>
+    <div className="w-full mx-auto my-10 p-4 font-sans">
+      <CommentsTable data={data} addRow={addRow} deleteRow={deleteRow} />
       <button className="center-btn" onClick={fetchData}>
         Get Data
       </button>
