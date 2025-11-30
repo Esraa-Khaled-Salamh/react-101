@@ -2,7 +2,6 @@
 
 
 
-
 /* Container */
 .app-container {
   max-width: 900px;
@@ -61,25 +60,5 @@
   background-color: #fafafa;
 }
 
-/* Hover effect */
-.table tbody tr:hover {
-  background-color: #f1f5f9;
-  transition: background 0.2s ease;
-}
-.center-btn {
-  display: block;        /* make button a block element */
-  margin: 20px auto;     /* auto left & right = centered */
-  padding: 10px 20px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #fff;
-  background-color: #2563eb; /* blue */
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
 
-.center-btn:hover {
-  background-color: #1d4ed8; /* darker blue on hover */
-}
+

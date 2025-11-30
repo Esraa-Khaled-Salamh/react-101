@@ -364,8 +364,23 @@ function Table({
                   {col.name
                     .replace(/([A-Z])/g, " $1")
                     .replace(/^./, (str) => str.toUpperCase())}
-                  {sortConfig.key === col.name &&
-                    (sortConfig.direction === "asc" ? " ▲" : " ▼")}
+
+                  <span
+                    className={`ml-1 inline-block text-[12px] transition-all ${
+                      sortConfig.key === col.name
+                        ? "text-blue-600 font-bold" // active sorted column
+                        : "text-gray-400" // default neutral arrows
+                    }`}
+                  >
+                    {sortConfig.key === col.name
+                      ? sortConfig.direction === "asc"
+                        ? "▲"
+                        : "▼"
+                      : col.isSortable
+                      ? "⇅"
+                      : ""}
+                    {/* Default icon */}
+                  </span>
                 </th>
               ))}
               <th>Actions</th>
@@ -394,6 +409,7 @@ function TableControl({
   tableTitle = "List",
   data = [],
   columns = [],
+  addNew,
   RowComponent = DefaultRow,
   pageSize = 100,
   rowActions = [],
@@ -448,62 +464,74 @@ function TableControl({
   return (
     <>
       <div className="w-full">
-        <div className="flex items-center justify-between mb-2.5">
-          <h2 className="table-title flex items-center gap-2">{tableTitle}</h2>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center  mb-2.5">
+            <h2 className="table-title flex items-center gap-2">
+              {tableTitle}
+            </h2>
 
-          {/* Header with ⋯ button */}
-          <div ref={menuRef} className="ml-1">
-            {(showExportButton || showPrintButton) && (
-              <div className="relative z-50">
-                <button
-                  onClick={() =>
-                    setOpenMenuId(openMenuId === "header" ? null : "header")
-                  }
-                  className="border-none bg-transparent text-[22px] cursor-pointer leading-none px-1.5 py-0.5"
-                >
-                  ⋯
-                </button>
+            <div ref={menuRef} className="ml-1">
+              {(showExportButton || showPrintButton) && (
+                <div className="relative z-50">
+                  <button
+                    onClick={() =>
+                      setOpenMenuId(openMenuId === "header" ? null : "header")
+                    }
+                    className="border-none bg-transparent text-[22px] cursor-pointer leading-none px-1.5 py-0.5"
+                  >
+                    ⋯
+                  </button>
 
-                {openMenuId === "header" && (
-                  <div className="absolute right-0 top-[110%] bg-white border border-gray-300 rounded-lg shadow-md z-50 min-w-[140px]">
-                    {showExportButton && (
-                      <button
-                        onClick={() => {
-                          handleExportToExcel();
-                          setOpenMenuId(null);
-                        }}
-                        className="block w-full text-left px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                      >
-                        Export to Excel
-                      </button>
-                    )}
-
-                    {showPrintButton && (
-                      <div>
+                  {openMenuId === "header" && (
+                    <div className="absolute right-0 top-[110%] bg-white border border-gray-300 rounded-lg shadow-md z-50 min-w-[140px]">
+                      {showExportButton && (
                         <button
                           onClick={() => {
-                            handlePrintCurrentPage();
+                            handleExportToExcel();
                             setOpenMenuId(null);
                           }}
                           className="block w-full text-left px-4 py-2 hover:bg-gray-100 cursor-pointer"
                         >
-                          Print Current Page
+                          Export to Excel
                         </button>
+                      )}
 
-                        <button
-                          onClick={() => {
-                            handlePrintAllData();
-                            setOpenMenuId(null);
-                          }}
-                          className="block w-full text-left px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                        >
-                          Print All
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                      {showPrintButton && (
+                        <div>
+                          <button
+                            onClick={() => {
+                              handlePrintCurrentPage();
+                              setOpenMenuId(null);
+                            }}
+                            className="block w-full text-left px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                          >
+                            Print Current Page
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              handlePrintAllData();
+                              setOpenMenuId(null);
+                            }}
+                            className="block w-full text-left px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                          >
+                            Print All
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {addNew && (
+              <button
+                onClick={addNew}
+                className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition"
+              >
+                Add New
+              </button>
             )}
           </div>
 
@@ -516,7 +544,6 @@ function TableControl({
             className="border border-gray-300 rounded-lg px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
           />
         </div>
-
         <Table
           data={currentItems} //currentItems
           columns={columns}
@@ -603,14 +630,18 @@ function App() {
           columns={columns}
           RowComponent={DefaultRowCompnent} // Or DefaultRow
           rowActions={rowActions}
+          addNew={addRow}
           showExportButton={true}
           showPrintButton={true}
           showPagination={true}
           pageSize={100}
         />
       </ErrorBoundary>
-
-      <button className="center-btn" onClick={fetchData}>
+      <br></br>
+      <button
+        className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition"
+        onClick={fetchData}
+      >
         Get Data
       </button>
     </div>
