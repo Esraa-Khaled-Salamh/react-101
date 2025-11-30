@@ -470,9 +470,9 @@ function TableControl({
               {tableTitle}
             </h2>
 
-            <div ref={menuRef} className="ml-1">
+            <div ref={menuRef} className="ml-1 inline-block">
               {(showExportButton || showPrintButton) && (
-                <div className="relative z-50">
+                <div className="relative z-50 inline-block">
                   <button
                     onClick={() =>
                       setOpenMenuId(openMenuId === "header" ? null : "header")
@@ -483,7 +483,7 @@ function TableControl({
                   </button>
 
                   {openMenuId === "header" && (
-                    <div className="absolute right-0 top-[110%] bg-white border border-gray-300 rounded-lg shadow-md z-50 min-w-[140px]">
+                    <div className="absolute right-0 mt-1 top-full bg-white border border-gray-300 rounded-lg shadow-md z-50 min-w-[140px]">
                       {showExportButton && (
                         <button
                           onClick={() => {
@@ -528,9 +528,9 @@ function TableControl({
             {addNew && (
               <button
                 onClick={addNew}
-                className="px-3 py-1.5 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition"
+                className="px-3 py-1.5 bg-white text-black rounded-md text-sm hover:bg-blue-700  hover:text-white transition"
               >
-                Add New
+                +
               </button>
             )}
           </div>
